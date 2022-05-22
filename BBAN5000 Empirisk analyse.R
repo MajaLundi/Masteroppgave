@@ -36,7 +36,6 @@ options(max.print=100000000)
 DF <- read.csv('Endelig datasett 333.csv', sep = ',', fileEncoding = 'UTF-8')
 DF <- DF[,-c(1)]
 
-####Småpynter på datasettet 
 #Pynte på rekkefølgen (og fjerner)
 DF <- DF[,c(1:8, 14, 16, 17:27),]
 
@@ -46,9 +45,6 @@ summary(DF)
 DF <- DF[,-c(1,3,6)]
 DF <- DF[,c(7, 1:6, 8:18)]
 DF <- subset(DF[-c(2,3,4,8)])
-
-#grunnlag <- grunnlag[!(grunnlag$Startkull == 0),]
-# = myData[!myData$A > 4,] # equal to myData[myData$A <= 4,]
 
 #Beskrivende statistikk  
 library('psych')
@@ -61,7 +57,7 @@ describe(DF)
 #Har prøvd k=3, k=5, k=10 og k=sqrt(6055)
 #k = 10 predikerer flest utveksling != 0 (små forskjeller) velger derfor k=10
 
-#Setter startkull, frafallsandel og kvinneandel som skal avgjøre om observasjonene ligner hverandre
+#Setter startkull og kvinneandel som skal avgjøre om observasjonene ligner hverandre
 
 DF_kNN <- kNN(DF, variable = c('Andel.ut.NORSK','Andel.ut.UTENL','Andel.UTENL','Antallstudperans',
                                'Karaktersnitt.H','Karaktersnitt.vgs',
@@ -71,18 +67,15 @@ DF_kNN <- kNN(DF, variable = c('Andel.ut.NORSK','Andel.ut.UTENL','Andel.UTENL','
 
 #Fjerner unødvendige kolonner 
 DF_kNN <- DF_kNN[,-c(15:25)]
-#DF_kNN$Startkull2 <- DF_kNN$Startkull*DF_kNN$Startkull
 
-#Bestemmer oss for å ikke inkludere antall doktorgrader og uveksling
+#Bestemmer oss for å ikke inkludere antall doktorgrader og utveksling
 DF_kNN <- DF_kNN[,-c(7, 12:13)]
 
 describe(DF_kNN)
 
 
-#Fjerner rare og ekstrem verdier
-#Startkull
+#Fjerner rare og ekstreme verdier
 hist(DF_kNN$Frafallsandel)
-
 hist(DF_kNN$Startkull)
 hist(DF_kNN$Antallstudperans)
 hist(DF_kNN$Snittalder)
@@ -102,8 +95,6 @@ DF_kNN <- DF_kNN[!(DF_kNN$Antallstudperans > 30),]
 DF_kNN <- DF_kNN[!(DF_kNN$Snittalder > 35),]
 
 DF_kNN <- DF_kNN[!(DF_kNN$Andel.UTENL > 0.6),]
-
-
 
 
 ################################################################################
@@ -141,7 +132,6 @@ cor.test(DF_kNN$Strykandel,DF_kNN$Karaktersnitt.H)
 original.lin <- lm(Frafallsandel ~ ., data = DF_kNN)
 summary(original.lin) 
 
-
 plot(original.lin, 1)
 
 durbinWatsonTest(original.lin)
@@ -178,7 +168,6 @@ ols_plot_resid_qq(original.lin)
 
 qqnorm(standard_res, ylab="Sample Quantiles", xlab="Theoretical Quantiles", main="Normal Q-Q Plot") 
 qqline(standard_res, col = 'red')
-
 
 #Residualplott
 ols_plot_resid_fit(original.lin)
@@ -249,7 +238,7 @@ lbs_fun(lasso.lin)
 #library("zoom") 
 #zm()
 
-#The following result reports the estimated coefficients under the MSE minimized ???? and MSE minimized 1se ???? respectively.
+#LASSO-koeffisienter
 coef(lasso.lin, c(lasso.lin.cv$lambda.min, lasso.lin.cv$lambda.1se))
 
 #LASSO Influential Features 
@@ -275,57 +264,12 @@ coef(lasso.lin.cv, s = 'lambda.1se') %>%
 
 
 ################################################################################
-#LM med kun fem variabler 
-lin.5 <- lm(Frafallsandel ~ Årstall + Snittalder  + Strykandel + Andel.UTENL, data = DF_kNN)
+#LM med kun fire variabler 
+lin.4 <- lm(Frafallsandel ~ Årstall + Snittalder  + Strykandel + Andel.UTENL, data = DF_kNN)
 #summary(original.lin) 
 
 #Standardiserte betakoeffisienter 
 library(lm.beta)
-beta.lin.5 <- lm.beta(lin.5)
-summary(beta.lin.5)
+beta.lin.4 <- lm.beta(lin.4)
+summary(beta.lin.4)
 
-###############################
-#Residualanalyse 
-library(lmtest)
-
-#VIF-indexer for multikollinearitet 
-library(car)
-vif <- vif(lin.5)
-vif
-
-#Tester for heteroskedastisitet
-BP <- bptest(lin.5)
-BP
-
-#Standardiserte residualer 
-standard_res <- rstandard(lin.5)
-
-final_data2 <- cbind(DF_kNN, standard_res)
-
-#Scatterplot to visualize the values for the predictor variable vs. the standardized residuals:
-plot(DF_kNN$Frafallsandel, standard_res, ylab='Standardiserte residualer', xlab='Frafallsandel') 
-abline(3, 0, col = 'red', lty='dashed')
-
-
-#qqplot
-#ols_plot_resid_qq(lin.5)
-
-#Shapiro wilk test for normality
-shapiro.test(final_data$standard_res[0:5000])
-
-
-ols_plot_resid_fit(lin.5)
-
-#Robusthetssjekk
-library(sandwich)
-
-lmtest::coeftest(lin.5, vcov. = sandwich::vcovHC(lin.5, type = 'HC1'))
-
-
-#####################################33
-ggplot(lin.5, aes(.fitted, .resid)) + geom_point(pch = 21) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
-  labs(x = "Fitted values", y = "Residuals",
-       title = "Fitted values vs. residuals",
-       subtitle = deparse(original.lin$call))

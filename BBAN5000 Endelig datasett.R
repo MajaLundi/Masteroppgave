@@ -1,4 +1,3 @@
-#install.packages(c('httr','foreign','rjstat','plyr','dplyr'))
 library(jsonlite)
 library(httr)
 library(foreign)
@@ -11,11 +10,8 @@ options(encoding="UTF-8")
 #Solveigs
 setwd("C:/Users/solme/OneDrive/Master/Endelig datasett")
 
-#Majas
-#setwd("~/Documents/Data master")
-
 ################################################################################
-#####Danner grunnlaget for det sammensatte datasettet#####
+#Danner grunnlaget for det sammensatte datasettet
 
 #Henter HELE gjennomføring og frafall (studiumnivå)
 grunnlag <- read.csv('20220310-undefined-Gjennomføring og frafall (studiumnivå).csv', sep = ';')
@@ -105,22 +101,13 @@ grunnlag$Andel.M <- grunnlag[,11]/grunnlag[,8]
 #Andel frafalt fra startkullet
 grunnlag$Frafallsandel <- grunnlag[,9]/grunnlag[,8]
 
-#Bør vi ha med andel frafalt mtp. kjønn? 
-
 #Fjerner NaN-verdier 
 grunnlag <- na.omit(grunnlag)
-#Finnes studier der startkullet er på 3-6 stykk. Er dette realistisk?
 
 grunnlag$Avdelingskode <- as.character(grunnlag$Avdelingskode)
 
-#grunnlag <- grunnlag[,c(1:8, 14, 9, 16)]
-
 grunnlag[, c(14,16)] <- round(grunnlag[, c(14,16)], digits = 2)
 
-#Burde ta en titt på studiene der ALLE har falt fra.. virker ikke helt sannsynlig
-
-
-#EKSTRA TITT PÅ EKSTREMVERDIER!!! 
 #Sletter uspesifiserte underenheter 
 grunnlag <- grunnlag[grunnlag$Avdelingskode!=0,]
 grunnlag <- grunnlag[!(grunnlag$Startkull > 6000),]
@@ -150,7 +137,6 @@ data1 <- data1[!(data1$Karakterpoeng == 0),]
 data1 <- data1[!(data1$Søkere.totalt == 0),]
 
 #Ser vekk fra Lokale-opptak - blir komplisert
-#OBS!!! OBS!!! Eks vil NTNU-handels vil kun få snittet til bachelor, men master inngår
 data1 <- data1[!(data1$Opptakstype=='L'),]
 
 #Finner gjennomsnittsprioritert per studium per institutt per år
@@ -158,7 +144,6 @@ data1 <- data1[!(data1$Opptakstype=='L'),]
 data1 <- data1[!(data1$Prioritet > 10),]
 
 data1$P.SUM <- data1[,12]*data1[,18]
-#Hmm er 4665 tilfeller med NA, men kan ikke slette disse radene fordi da vil karaktersnittet bli feil
 
 #Gjør at en representerer ett studium per institutt per år
 data1 <- data.frame(
@@ -179,12 +164,12 @@ data1[,c(9:11)] <- round(data1[,c(9:11)], digits = 2)
 data1$Avdelingskode <- as.character(data1$Avdelingskode)
 
 data1 <- data1[,-c(5:8,11)]
-#Fjern "11" for ? inkludere prioritetssnitt / legg til for ? ta vekk. 
+#Fjern "11" for å inkludere prioritetssnitt / legg til for å ta vekk. 
 
 #Analyse hvorvidt prioritetssnitt skal være med
 #sum(data1$Prioritetssnitt==1, na.rm=T) = 2782
 #sum(is.na(data1$Prioritetssnitt))
-
+#Velger å ikke ha det med
 
 #Fjerne de verdiene med for høyt opptakssnitt/karaktersnitt
 data1$MAX <- data1[,5]-data1[,6]
@@ -233,7 +218,6 @@ data2 <- data2[!(data2$Snittalder<18),]
 
 utg <- left_join(utg, data2, by = c("Institusjonskode","Avdelingskode", "Årstall", "Studiumkode"))
 
-
 ################################################################################
 #Henter avlagte doktorgrader
 #Denne vil være for hvert institutt per år (vår+høst-semester)
@@ -277,9 +261,6 @@ data4 <- data.frame(unique(data4))
 data4 <- data.frame(aggregate(cbind(Publiseringspoeng)
                               ~ Institusjonskode + Avdelingskode + Årstall, data = data4, FUN = sum))
 
-#Prøvde å ta antall publiseringspoeng per ansatt, men var såpass mange NA-verdier på antall ansatte
-# 1/6 at vi bestemte oss for å ta logaritmen i stedet 
-
 data4$Publiseringspoeng <- log(1+data4$Publiseringspoeng)
 
 data4$Avdelingskode <- as.character(data4$Avdelingskode)
@@ -287,8 +268,6 @@ data4$Avdelingskode <- as.character(data4$Avdelingskode)
 data4[, c(4)] <- round(data4[, c(4)], digits = 2)
 
 utg <- left_join(utg, data4, by = c("Institusjonskode", "Avdelingskode", "Årstall"))
-
-
 
 ################################################################################
 #Henter karakterer aggregert 
@@ -430,8 +409,6 @@ data6 <- data6[!(data6$Antallstudperans > 400),]
 #Slår sammen grunnlaget med nydata3
 utg <- left_join(utg, data6, by = c("Institusjonskode","Avdelingskode", "Årstall"))
 
-#Hmm.. ser i DBH at de beregner Studenter per faglig årsverk... Burde vi heller gjøre det? 
-
 
 ################################################################################
 #Henter utvekslingsstudenter
@@ -554,13 +531,7 @@ utg$Studnavn <- factor(utg$Studnavn)
 
 
 
-
 ################################################################################
 #Lager datasettet til en CSV-fil
 
 write.csv(utg,'C:/Users/solme/OneDrive/Master/Endelig datasett 333.csv', row.names = TRUE)
-
-################################################################################
-#Lager pdf 
-#dir()
-#knitr::stitch('BBAN5000 Endelig datasett.R')
